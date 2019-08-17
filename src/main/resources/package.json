@@ -1,0 +1,7 @@
+{
+  "main": "./src/index.js",
+  "name": "cauldron-app",
+  "script": {
+    "compile": "echo 'This script is ran before main is executed'"
+  }
+}

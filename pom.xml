@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>me.conji</groupId>
+    <artifactId>Cauldron</artifactId>
+    <version>1.0.0</version>
+
+    <build>
+        <defaultGoal>clean package</defaultGoal>
+        <finalName>${project.finalBaseName}-noshade</finalName>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- Clean the target folder content -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.1.0</version>
+            </plugin>
+            <!-- Include resource files -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/jars</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Compile and include classes -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <!-- Unit testing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.0</version>
+                <configuration>
+                    <!-- Don't trim stack traces -->
+                    <trimStackTrace>false</trimStackTrace>
+                </configuration>
+            </plugin>
+            <!-- Generate a jar containing classes and resources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.1.0</version>
+            </plugin>
+            <!-- Generate a jar containing the java sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <configuration>
+                    <finalName>${project.finalBaseName}</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Generate a jar containing classes, resources and shaded libraries -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.1</version>
+                <configuration>
+                    <!-- Don't create the reduced pom file, as we don't deploy the shaded jar -->
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <!-- Deploy the non shaded jar as main artifact -->
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <!-- Use the base jar name, to help server owners download the right jar -->
+                    <finalName>${project.finalBaseName}</finalName>
+
+                    <!-- Relocate shaded libraries that might cause class conflicts with other plugins -->
+                    <relocations>
+                        <relocation>
+                            <pattern>com.comphenix.packetwrapper</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.com.comphenix.packetwrapper</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>net.querz.nbt</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.net.querz.nbt</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>io.sentry</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.io.sentry</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.slf4j</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.org.slf4j</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>javax.inject</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.javax.inject</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>ch.jalu</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.ch.jalu</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.apache.commons</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.org.apache.commons</shadedPattern>
+                        </relocation>
+                        <relation>
+                            <pattern>com.fasterxml.jackson.core</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.com.fasterxml.jackson.core</shadedPattern>
+                        </relation>
+                        <relocation>
+                            <pattern>de.mxro.process</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.de.mxro.process</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.reflections</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.org.reflections</shadedPattern>
+                        </relocation>
+                    </relocations>
+
+                    <filters>
+                        <!-- Ignore manifest signatures for shading the project into an uber-jar to fix -->
+                        <!-- "Invalid signature file digest for Manifest main attributes" -->
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.2.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <skipPoms>false</skipPoms>
+                    <runOnlyOnce>true</runOnlyOnce>
+                    <injectAllReactorProjects>true</injectAllReactorProjects>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <gitDescribe>
+                        <tags>true</tags>
+                    </gitDescribe>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <filesToInclude>src/main/resources/*</filesToInclude>
+                    <replacements>
+                        <replacement>
+                            <token>PROJECT.VERSION</token>
+                            <value>${project.versionCode}</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
+                <inherited>false</inherited>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <!-- SpigotAPI Repo -->
+        <repository>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots</url>
+        </repository>
+
+        <!-- CodeMC Repo -->
+        <repository>
+            <id>codemc-repo</id>
+            <url>https://repo.codemc.org/repository/maven-public</url>
+        </repository>
+
+        <!-- ProtocolLib Repo -->
+        <repository>
+            <id>dmulloy2-repo</id>
+            <url>http://repo.dmulloy2.net/content/groups/public</url>
+        </repository>
+
+        <!-- InventiveTalent Repo -->
+        <repository>
+            <id>inventive-repo</id>
+            <url>https://repo.inventivetalent.org/content/groups/public</url>
+        </repository>
+
+        <!-- Airkar Repo -->
+        <repository>
+            <id>aikar</id>
+            <url>https://repo.aikar.co/content/groups/aikar/</url>
+        </repository>
+
+        <!-- JitPack Repo -->
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- Spigot API, minecraft server modding API, https://www.spigotmc.org/ -->
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.14.4-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-lang</groupId>
+                    <artifactId>commons-lang</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.googlecode.json-simple</groupId>
+                    <artifactId>json-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.yaml</groupId>
+                    <artifactId>snakeyaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>net.md-5</groupId>
+                    <artifactId>bungeecord-chat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- ProtocolLib, spigot packet manipulation library, https://github.com/dmulloy2/ProtocolLib -->
+        <dependency>
+            <groupId>com.comphenix.protocol</groupId>
+            <artifactId>ProtocolLib-API</artifactId>
+            <version>4.4.0-SNAPSHOT</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>cglib</groupId>
+                    <artifactId>cglib-nodep</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.comphenix.executors</groupId>
+                    <artifactId>BukkitExecutors</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.comphenix.packetwrapper</groupId>
+            <artifactId>PacketWrapper</artifactId>
+            <version>1.13-R0.1-SNAPSHOT</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Jalu Injector, https://github.com/ljacqu/DependencyInjector -->
+        <dependency>
+            <groupId>ch.jalu</groupId>
+            <artifactId>injector</artifactId>
+            <version>1.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.9</version>
+        </dependency>
+
+        <!-- LogisticsAPI, tech mechanics API for spigot plugins, https://github.com/LogisticsCraft/Logistics-API -->
+        <dependency>
+            <groupId>com.logisticscraft</groupId>
+            <artifactId>logistics-api</artifactId>
+            <version>0.0.5-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Sentry, a library that collects exception data and reports them automatically -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry</artifactId>
+            <version>1.7.26</version>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.25</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.Querz</groupId>
+            <artifactId>NBT</artifactId>
+            <version>3.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.griefcraft.lwc</groupId>
+            <artifactId>Modern-LWC</artifactId>
+            <version>2.1.2</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.graalvm.truffle</groupId>
+            <artifactId>truffle-api</artifactId>
+            <version>19.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>graal-sdk</artifactId>
+            <version>19.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.9.11</version>
+        </dependency>
+    </dependencies>
+
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+
+        <project.buildNumber>SNAPSHOT</project.buildNumber>
+        <project.versionCode>${project.version}-${project.buildNumber}</project.versionCode>
+        <project.finalBaseName>${project.artifactId}-${project.version}</project.finalBaseName>
+    </properties>
+</project>
