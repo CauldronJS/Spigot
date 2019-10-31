@@ -1,7 +1,7 @@
-package main.java.me.conji.cauldron;
+package me.conji.cauldron;
 
-import me.conji.cauldron.api.ProcessRunner;
-import me.conji.cauldron.api.js.CauldronPromise;
+import main.java.me.conji.cauldron.api.ProcessRunner;
+import main.java.me.conji.cauldron.api.js.CauldronPromise;
 
 public class SpigotProcessRunner implements ProcessRunner {
     @Override

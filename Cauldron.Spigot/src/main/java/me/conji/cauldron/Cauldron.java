@@ -1,12 +1,12 @@
 package me.conji.cauldron;
 
-import de.mxro.process.Spawn;
-import main.java.me.conji.cauldron.SpigotAsyncContext;
 import me.conji.cauldron.api.CauldronApi;
+import me.conji.cauldron.api.CauldronVM;
+import me.conji.cauldron.api.LanguageEngine;
 import me.conji.cauldron.api.ProcessRunner;
 import me.conji.cauldron.api.async.AsyncContext;
-import me.conji.cauldron.utils.PathHelper;
-import me.conji.cauldron.utils.ScriptHelper;
+import me.conji.cauldron.api.js.JavaScriptEngine;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.EventPriority;
@@ -18,92 +18,42 @@ import org.reflections.Reflections;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.logging.Level;
 
 public class Cauldron extends JavaPlugin implements CauldronApi {
     private static Cauldron instance;
-    private static Reflections reflections;
 
-    private Context context;
+    private Reflections reflections;
+    private CauldronVM vm;
+    private JavaScriptEngine engine;
     private SpigotAsyncContext asyncContext;
-
-    public Cauldron() {
-        if (instance == null) {
-            instance = this;
-            reflections = new Reflections("me.conji.cauldron");
-        }
-    }
-
-    public Context getContext() {
-        return this.context;
-    }
 
     @Override
     public void onEnable() {
-        if (!this.getDataFolder().exists()) {
-            this.createDataFolder();
+        instance = this;
+        this.reflections = new Reflections("me.conji.cauldron");
+        this.engine = new JavaScriptEngine(this);
+        this.vm = new CauldronVM(this.engine);
+
+        try {
+            this.engine.initialize(this.getDataFolder());
+            this.asyncContext = new SpigotAsyncContext();
+            InputStream loader = this.engine.getFile("lib/internal/bootstrap/loaders.js");
+            this.engine.eval(loader, "lib/internal/bootstrap/loaders.js");
+
+        } catch (IOException ex) {
+            this.getLogger().log(Level.SEVERE, "Failed to bootstrap Cauldron: " + ex.getMessage());
         }
-        this.asyncContext = new SpigotAsyncContext();
-        this.bootstrap();
     }
 
     @Override
     public void onDisable() {
-        try {
-            this.context.close(true);
-        } finally {
-            // fail silently because fuck it
-        }
+        // dispose of engine and wait for all promises to finish
     }
 
-    private void createDataFolder() {
-        this.getDataFolder().mkdirs();
-        Path datadir = this.getDataFolder().toPath();
-        try {
-            Files.copy(this.getResource("package.json"), datadir.resolve("package.json"));
-            datadir.resolve("src").toFile().mkdir();
-            Files.copy(this.getResource("src/index.js"), datadir.resolve("src/index.js"));
-        } catch (IOException ex) {
-            this.getLogger().log(Level.WARNING, "Failed to generate data folders: " + ex.toString());
-        }
-    }
-
-    private void bootstrap() {
-        if (this.context != null) {
-            this.context.close(true);
-        }
-        this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowAllAccess(true)
-                .allowHostAccess(HostAccess.ALL).allowCreateThread(true).allowHostClassLoading(true).allowIO(true)
-                .build();
-        try {
-            // InjectionFactory.initialize(this.reflections);
-            this.evalScript(ScriptHelper.readFile("lib/internal/bootstrap/loaders.js"),
-                    "lib/internal/bootstrap/loaders.js");
-        } catch (IOException ex) {
-            this.log(Level.SEVERE, "Failed to bootstrap: " + ex.toString());
-        }
-    }
-
-    public String runProcess(String command, String dir) {
-        return Spawn.sh(PathHelper.getFile(dir), command);
-    }
-
-    public Value evalScript(String contents, String filename) throws IOException {
-        Source source = Source.newBuilder("js", contents, filename).build();
-        return this.context.eval(source);
-    }
-
-    public String readFile(String path) throws IOException {
-        return ScriptHelper.readFile(path);
-    }
-
-    public File getFile(String path) {
-        return PathHelper.getFile(path);
-    }
-
-    public void registerNewEventHandler(String type, Value handler) throws ClassNotFoundException {
+    public static void registerNewEventHandler(String type, Value handler) throws ClassNotFoundException {
         Class clazz = Class.forName(type);
         Listener lis = new Listener() {
             public int hashCode() {
@@ -112,15 +62,16 @@ public class Cauldron extends JavaPlugin implements CauldronApi {
         };
         EventExecutor exec = (listener, event) -> {
             try {
-                handler.execute(new Object[] { event });
+                handler.execute(event);
             } catch (Exception exception) {
+                // do nothing
             }
         };
 
-        getServer().getPluginManager().registerEvent(clazz, lis, EventPriority.NORMAL, exec, this);
+        Bukkit.getPluginManager().registerEvent(clazz, lis, EventPriority.NORMAL, exec, instance);
     }
 
-    public Command createCommand(String name, final Value handler) {
+    public static Command createCommand(String name, final Value handler) {
         return new Command(name) {
             public boolean execute(CommandSender sender, String commandLabel, String[] args) {
                 return handler.execute(sender, commandLabel, args).asBoolean();
@@ -128,17 +79,14 @@ public class Cauldron extends JavaPlugin implements CauldronApi {
         };
     }
 
-    public void log(Level level, String message) {
-        this.getLogger().log(level, message);
-    }
-
-    public static Cauldron getInstance() {
-        return instance;
-    }
-
     @Override
     public Path getPath() {
         return this.getDataFolder().toPath();
+    }
+
+    @Override
+    public CauldronVM getVM() {
+        return this.vm;
     }
 
     @Override
@@ -149,5 +97,14 @@ public class Cauldron extends JavaPlugin implements CauldronApi {
     @Override
     public ProcessRunner getProcessRunner() {
         return null;
+    }
+
+    @Override
+    public LanguageEngine getEngine() {
+        return this.engine;
+    }
+
+    public Reflections getReflections() {
+        return reflections;
     }
 }

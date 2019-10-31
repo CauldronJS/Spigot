@@ -116,8 +116,8 @@
                             <shadedPattern>me.conji.cauldron.libs.com.fasterxml.jackson.core</shadedPattern>
                         </relation>
                         <relocation>
-                            <pattern>de.mxro.process</pattern>
-                            <shadedPattern>me.conji.cauldron.libs.de.mxro.process</shadedPattern>
+                            <pattern>main.java.de.mxro.process</pattern>
+                            <shadedPattern>me.conji.cauldron.libs.main.java.de.mxro.process</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.reflections</pattern>
