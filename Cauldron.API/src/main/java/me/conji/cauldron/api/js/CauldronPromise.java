@@ -1,15 +1,15 @@
 package me.conji.cauldron.api.js;
 
-import org.graalvm.polyglot.Context;
+import me.conji.cauldron.api.async.AsyncFunction;
 import org.graalvm.polyglot.Value;
 
-import java.util.Map;
-
-public abstract class CauldronPromise {
+public abstract class CauldronPromise implements AsyncFunction {
   private Object lock;
+  private Value function;
 
-  protected CauldronPromise() {
+  protected CauldronPromise(Value function) {
     this.lock = new Object();
+    this.function = function;
   }
 
   public Value toNativePromise() {
@@ -20,5 +20,27 @@ public abstract class CauldronPromise {
 
   public Object getLock() {
     return this.lock;
+  }
+
+  @Override
+  public Value getFunction() {
+    return this.function;
+  }
+
+  public Value function() {
+    return null;
+  }
+
+  @Override
+  public void run() {
+
+  }
+
+  public CauldronPromise doThen(Value handle) {
+    return null;
+  }
+
+  public CauldronPromise doCatch(Value handle) {
+    return null;
   }
 }

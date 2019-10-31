@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import com.sun.istack.internal.NotNull;
 import me.conji.cauldron.api.async.AsyncContext;
+import me.conji.cauldron.api.js.Environment;
 import org.graalvm.polyglot.Value;
 
 public interface CauldronApi {
@@ -22,6 +23,8 @@ public interface CauldronApi {
   public InputStream getResource(@NotNull String name);
 
   public LanguageEngine getEngine();
+
+  public Environment getEnvironment();
 
   public Logger getLogger();
 }

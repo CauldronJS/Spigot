@@ -1,7 +1,7 @@
 package me.conji.cauldron.api;
 
-import me.conji.cauldron.api.js.CauldronPromise;
+import me.conji.cauldron.api.async.AsyncFunction;
 
 public interface ProcessRunner {
-  public CauldronPromise run(String command, String dir);
+  public AsyncFunction run(String command, String dir);
 }
