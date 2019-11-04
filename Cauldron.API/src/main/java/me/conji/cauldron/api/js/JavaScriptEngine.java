@@ -1,5 +1,6 @@
 package me.conji.cauldron.api.js;
 
+import com.sun.istack.internal.NotNull;
 import me.conji.cauldron.api.CauldronApi;
 import me.conji.cauldron.api.LanguageEngine;
 import org.graalvm.polyglot.Context;
@@ -23,13 +24,23 @@ public class JavaScriptEngine implements LanguageEngine {
   }
 
   @Override
-  public Value eval(String contents, String filename) throws IOException {
+  public Value bindings() {
+    return this.context.getPolyglotBindings();
+  }
+
+  @Override
+  public Value eval(@NotNull Source source, String filename) {
+    return this.context.eval(source);
+  }
+
+  @Override
+  public Value eval(@NotNull String contents, @NotNull String filename) throws IOException {
     Source source = Source.newBuilder("js", contents, filename).build();
     return this.context.eval(source);
   }
 
   @Override
-  public Value eval(InputStream contentStream, String filename) throws IOException {
+  public Value eval(@NotNull InputStream contentStream, @NotNull String filename) throws IOException {
     InputStreamReader isr = new InputStreamReader(contentStream);
     BufferedReader br = new BufferedReader(isr);
     StringBuilder result = new StringBuilder();
@@ -40,6 +51,11 @@ public class JavaScriptEngine implements LanguageEngine {
     isr.close();
     br.close();
     return this.eval(result.toString(), filename);
+  }
+
+  @Override
+  public Value get(String identifier) {
+    return this.context.getPolyglotBindings().getMember(identifier);
   }
 
   @Override

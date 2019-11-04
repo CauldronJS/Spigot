@@ -2,32 +2,35 @@ package me.conji.cauldron.api;
 
 import org.graalvm.polyglot.Value;
 
+import java.io.IOException;
 import java.security.AccessControlException;
-import java.util.HashMap;
-import java.util.function.Function;
-import java.util.function.ToIntBiFunction;
 
 public class CauldronVM {
-  private HashMap<String, Object> environmentVariables;
   private LanguageEngine engine;
+  private Value vmSymbol;
 
   public CauldronVM(LanguageEngine engine) {
-    this.environmentVariables = new HashMap<>();
     this.engine = engine;
+    try {
+      this.vmSymbol = engine.eval("return Symbol('CAULDRON_VM')", "CauldronVM");
+    } catch (IOException ex) {
+      // debug
+    }
   }
 
   public Object get(String name) {
-    return this.environmentVariables.get(name);
+    return this.engine.get(name);
   }
 
   public void put(String name, Object value) {
     if (this.engine.isInitialized()) {
       throw new AccessControlException("Cannot edit VM variables once the engine has been initialized");
     }
-    this.environmentVariables.put(name, value);
+    
+
   }
 
   public Value asPolyglotObject() {
-    return Value.asValue(this.environmentVariables);
+    return this.engine.bindings();
   }
 }
