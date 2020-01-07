@@ -1,12 +1,5 @@
 package me.conji.cauldron;
 
-import me.conji.cauldron.api.CauldronApi;
-import me.conji.cauldron.api.CauldronVM;
-import me.conji.cauldron.api.LanguageEngine;
-import me.conji.cauldron.api.ProcessRunner;
-import me.conji.cauldron.api.async.AsyncContext;
-import me.conji.cauldron.api.js.Environment;
-import me.conji.cauldron.api.js.JavaScriptEngine;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -17,19 +10,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.graalvm.polyglot.*;
 import org.reflections.Reflections;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.logging.Level;
 
-public class Cauldron extends JavaPlugin implements CauldronApi {
+public class Cauldron extends JavaPlugin {
   private static Cauldron instance;
 
   private Reflections reflections;
-  private CauldronVM vm;
-  private JavaScriptEngine engine;
-  private SpigotAsyncContext asyncContext;
 
   @Override
   public void onEnable() {
@@ -37,6 +26,8 @@ public class Cauldron extends JavaPlugin implements CauldronApi {
     this.reflections = new Reflections("me.conji.cauldron");
     this.engine = new JavaScriptEngine(this);
     this.vm = new CauldronVM(this.engine);
+    this.environment = new SpigotEnvironment(this);
+    this.vm.put("target", new TargetDescriptor("Spigot", this.getMCVersion()));
     try {
       this.engine.initialize(this.getDataFolder());
       this.asyncContext = new SpigotAsyncContext();
@@ -106,10 +97,28 @@ public class Cauldron extends JavaPlugin implements CauldronApi {
 
   @Override
   public Environment getEnvironment() {
-    return null;
+    return this.environment;
   }
 
   public Reflections getReflections() {
     return reflections;
+  }
+
+  private String getMCVersion() {
+    return Bukkit.getVersion();
+  }
+
+  private String getNMSVersion() {
+    String fullName = Bukkit.getServer().getClass().getPackage().getName();
+    String withUnderscores = fullName.substring(fullName.lastIndexOf('.') + 1);
+    if (withUnderscores.startsWith("v_")) {
+      return withUnderscores.substring(2);
+    } else {
+      return withUnderscores.substring(1);
+    }
+  }
+
+  private String getCBVersion() {
+    return Bukkit.getBukkitVersion();
   }
 }
