@@ -8,6 +8,7 @@ import org.graalvm.polyglot.Value;
 public class AsyncContainer {
   Isolate isolate;
   SynchronousQueue<Value> fnQueue = new SynchronousQueue<>();
+  boolean isRunning = false;
 
   public AsyncContainer(Isolate isolate) {
     this.isolate = isolate;
@@ -22,10 +23,8 @@ public class AsyncContainer {
   }
 
   public void run() {
-    long startTime = System.currentTimeMillis();
-    while (System.currentTimeMillis() < (startTime + 500) && !this.fnQueue.isEmpty()) {
-      // we don't want it running anymore than 500ms, though that may be too long as
-      // well
+    this.isRunning = true;
+    while (!this.fnQueue.isEmpty()) {
       try {
         Value fn = this.fnQueue.take();
         fn.execute(this.isolate.getContext().getPolyglotBindings()); // global
@@ -34,5 +33,10 @@ public class AsyncContainer {
         // do nothing
       }
     }
+    this.isRunning = false;
+  }
+
+  public boolean isRunning() {
+    return this.isRunning;
   }
 }

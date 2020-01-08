@@ -1,7 +1,10 @@
 package me.conji.cauldron.core;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.Callable;
 
+import org.bukkit.Bukkit;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
@@ -15,6 +18,8 @@ public class Isolate {
   private Cauldron cauldron;
   private Context context;
   private AsyncContainer asyncContainer;
+  private ModuleManager modules;
+  private HashMap<String, Value> boundValues = new HashMap<>();
 
   /**
    * Represents an instance of the VM that runs scripts. Objects located in one
@@ -27,6 +32,17 @@ public class Isolate {
     this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowHostAccess(HostAccess.ALL)
         .allowCreateThread(false).allowHostClassLoading(true).allowIO(false).build();
     this.asyncContainer = new AsyncContainer(this);
+    this.modules = new ModuleManager(this);
+
+    Bukkit.getScheduler().scheduleSyncRepeatingTask(this.cauldron, new Runnable() {
+
+      @Override
+      public void run() {
+        if (!Isolate.this.asyncContainer.isRunning()) {
+          Isolate.this.asyncContainer.run();
+        }
+      }
+    }, this.asyncContainer.isRunning() ? 5 : 1, 20); // TODO: determine this based on hardware
   }
 
   /**
@@ -83,6 +99,14 @@ public class Isolate {
     }
   }
 
+  public void put(String identifier, Object object) {
+    this.context.getPolyglotBindings().putMember(identifier, object);
+  }
+
+  public void bind(String identifier, Object value) {
+    this.boundValues.put(identifier, Value.asValue(value));
+  }
+
   /**
    * Gets the context of this isolate
    * 
@@ -90,5 +114,9 @@ public class Isolate {
    */
   public Context getContext() {
     return this.context;
+  }
+
+  public boolean queueAsync(Value fn) {
+    return this.asyncContainer.queue(fn);
   }
 }
