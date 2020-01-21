@@ -14,7 +14,7 @@
 
         <resources>
             <resource>
-                <directory>./Cauldron.API/src/main/resources</directory>
+                <directory>./src/main/resources</directory>
             </resource>
         </resources>
 
@@ -216,7 +216,7 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.14.4-R0.1-SNAPSHOT</version>
+            <version>1.15.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>

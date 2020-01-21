@@ -17,7 +17,6 @@ public class Isolate {
 
   private Cauldron cauldron;
   private Context context;
-  private AsyncContainer asyncContainer;
   private ModuleManager modules;
   private HashMap<String, Value> boundValues = new HashMap<>();
 
@@ -31,18 +30,7 @@ public class Isolate {
     this.cauldron = cauldronInstance;
     this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowHostAccess(HostAccess.ALL)
         .allowCreateThread(false).allowHostClassLoading(true).allowIO(false).build();
-    this.asyncContainer = new AsyncContainer(this);
     this.modules = new ModuleManager(this);
-
-    Bukkit.getScheduler().scheduleSyncRepeatingTask(this.cauldron, new Runnable() {
-
-      @Override
-      public void run() {
-        if (!Isolate.this.asyncContainer.isRunning()) {
-          Isolate.this.asyncContainer.run();
-        }
-      }
-    }, this.asyncContainer.isRunning() ? 5 : 1, 20); // TODO: determine this based on hardware
   }
 
   /**
