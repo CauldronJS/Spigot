@@ -1,20 +1,15 @@
 package me.conji.cauldron.core;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.logging.Level;
-
-import org.reflections.Reflections;
 
 import me.conji.cauldron.api.Module;
-import me.conji.cauldron.internal.modules.InternalModule;
+import me.conji.cauldron.internal.modules.Console;
+import me.conji.cauldron.utils.PathHelpers;
 
 public class ModuleManager {
   private Isolate isolate;
-  private HashMap<String, InternalModule> internalModules = new HashMap<>();
-  private HashMap<String, Module> publicModules = new HashMap<>();
+  private HashMap<String, Object> registeredModules = new HashMap<>();
+  private HashMap<String, Object> internalModules = new HashMap<>();
 
   /**
    * ModuleManagers are in charge of Java specific modules that are typically
@@ -25,27 +20,47 @@ public class ModuleManager {
    */
   public ModuleManager(Isolate isolate) {
     this.isolate = isolate;
-    Set<Class<? extends Module>> modules = new Reflections("me.conji.cauldron").getSubTypesOf(Module.class);
-    modules.forEach(clazz -> {
-      try {
-        Module module = clazz.newInstance();
-        if (module.isInternal()) {
-          this.internalModules.put(module.getName(), (InternalModule) module);
-        } else {
-          this.publicModules.put(module.getName(), module);
-        }
-        if (module.isGlobal()) {
-          this.isolate.put(module.getName(), module);
-        }
-      } catch (InstantiationException instantiationException) {
-        this.isolate.cauldron().getLogger().log(Level.SEVERE, "Failed to instantiante module " + clazz.getName());
-      } catch (IllegalAccessException illegalAccessException) {
-        this.isolate.cauldron().getLogger().log(Level.SEVERE, "Failed to access module " + clazz.getName());
-      }
-    });
   }
 
-  public void injectInternalModules() {
+  public void registerModules() {
+    this.putModule(Console.class, PathHelpers.class);
+  }
 
+  public Object getModule(String id) {
+    return this.registeredModules.get(id);
+  }
+
+  public Object getInternalModule(String id) {
+    return this.internalModules.get(id);
+  }
+
+  @SuppressWarnings("unchecked")
+  public void putModule(Object... modules) {
+    for (Object obj : modules) {
+      try {
+        Module module = null;
+        if (obj instanceof Module) {
+          module = (Module) obj;
+        } else if (obj instanceof Class) {
+          module = ((Class<? extends Module>) obj).newInstance();
+        }
+        if (module.isGlobal() && module.getName() != null) {
+          // injects as a global class
+          this.isolate.bind(module.getName(), obj);
+        }
+        if (module.isInternal()) {
+          // bind with access to `internalBinding`
+          this.internalModules.put(module.id, obj);
+        } else {
+          this.registeredModules.put(module.id, obj);
+        }
+      } catch (Exception ex) {
+        Console.error(ex);
+      }
+    }
+  }
+
+  public void clear() {
+    this.registeredModules.clear();
   }
 }

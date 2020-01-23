@@ -1,5 +1,8 @@
 package me.conji.cauldron;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -8,34 +11,37 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.graalvm.polyglot.*;
-import org.reflections.Reflections;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.util.logging.Level;
+import me.conji.cauldron.api.TargetDescriptor;
+import me.conji.cauldron.core.FileReader;
+import me.conji.cauldron.core.Isolate;
+import me.conji.cauldron.internal.modules.Console;
 
 public class Cauldron extends JavaPlugin {
   private static Cauldron instance;
+  private final String ENGINE_ENTRY = "lib/internal/bootstrap/loaders.js";
 
-  private Reflections reflections;
+  private Isolate mainIsolate;
+  private TargetDescriptor targetDescriptor;
+
+  public Cauldron() {
+    this.targetDescriptor = new TargetDescriptor("spigot");
+    this.targetDescriptor.addVersionDescription("nms", this.getNMSVersion());
+    this.targetDescriptor.addVersionDescription("cb", this.getCBVersion());
+  }
 
   @Override
   public void onEnable() {
     instance = this;
-    this.reflections = new Reflections("me.conji.cauldron");
-    this.engine = new JavaScriptEngine(this);
-    this.vm = new CauldronVM(this.engine);
-    this.environment = new SpigotEnvironment(this);
-    this.vm.put("target", new TargetDescriptor("Spigot", this.getMCVersion()));
+    this.mainIsolate = new Isolate(this);
+    // load the entry file
     try {
-      this.engine.initialize(this.getDataFolder());
-      this.asyncContext = new SpigotAsyncContext();
-      InputStream loader = this.engine.getFile("lib/internal/bootstrap/loaders.js");
-      this.engine.eval(loader, "lib/internal/bootstrap/loaders.js");
-
+      String entry = FileReader.read(ENGINE_ENTRY);
+      this.mainIsolate.runScript(entry, ENGINE_ENTRY);
+    } catch (FileNotFoundException ex) {
+      Console.error("Failed to find Cauldron entry point", ex);
     } catch (IOException ex) {
-      this.getLogger().log(Level.SEVERE, "Failed to bootstrap Cauldron: " + ex.getMessage());
+      Console.error("An error occured when loading Cauldron", ex);
     }
   }
 
@@ -70,44 +76,6 @@ public class Cauldron extends JavaPlugin {
     };
   }
 
-  @Override
-  public Path getPath() {
-    return this.getDataFolder().toPath();
-  }
-
-  @Override
-  public CauldronVM getVM() {
-    return this.vm;
-  }
-
-  @Override
-  public AsyncContext getAsyncContext() {
-    return this.asyncContext;
-  }
-
-  @Override
-  public ProcessRunner getProcessRunner() {
-    return null;
-  }
-
-  @Override
-  public LanguageEngine getEngine() {
-    return this.engine;
-  }
-
-  @Override
-  public Environment getEnvironment() {
-    return this.environment;
-  }
-
-  public Reflections getReflections() {
-    return reflections;
-  }
-
-  private String getMCVersion() {
-    return Bukkit.getVersion();
-  }
-
   private String getNMSVersion() {
     String fullName = Bukkit.getServer().getClass().getPackage().getName();
     String withUnderscores = fullName.substring(fullName.lastIndexOf('.') + 1);
@@ -120,5 +88,9 @@ public class Cauldron extends JavaPlugin {
 
   private String getCBVersion() {
     return Bukkit.getBukkitVersion();
+  }
+
+  public static Cauldron instance() {
+    return instance;
   }
 }

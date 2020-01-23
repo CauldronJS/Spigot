@@ -4,30 +4,40 @@ import org.graalvm.polyglot.Value;
 
 public class Console extends InternalModule {
   public Console() {
-    super("cauldron", true);
+    super();
   }
 
-  public void log(Value... contents) {
-    for (Value value : contents) {
+  public static void log(Object... contents) {
+    for (Object value : contents) {
       // log
     }
   }
 
-  public void error(Value... contents) {
-    for (Value value : contents) {
+  public static void error(Object... contents) {
+    for (Object value : contents) {
       // log
     }
   }
 
-  public void debug(Value... contents) {
-    for (Value value : contents) {
+  public static void debug(Object... contents) {
+    for (Object value : contents) {
       // log
     }
   }
 
-  public void warn(Value... contents) {
-    for (Value value : contents) {
+  public static void warn(Object... contents) {
+    for (Object value : contents) {
       // log
     }
+  }
+
+  @Override
+  public String getName() {
+    return "console";
+  }
+
+  @Override
+  public boolean isGlobal() {
+    return true;
   }
 }
