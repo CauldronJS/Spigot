@@ -42,7 +42,13 @@ public class ModuleManager {
         if (obj instanceof Module) {
           module = (Module) obj;
         } else if (obj instanceof Class) {
-          module = ((Class<? extends Module>) obj).newInstance();
+          if (Module.class.isAssignableFrom((Class) obj)) {
+            module = ((Class<? extends Module>) obj).newInstance();
+          } else {
+            this.internalModules.put(((Class) obj).getName(), obj);
+          }
+        } else {
+          return;
         }
         if (module.isGlobal() && module.getName() != null) {
           // injects as a global class
