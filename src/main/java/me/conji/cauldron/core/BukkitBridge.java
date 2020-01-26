@@ -10,7 +10,9 @@ import org.bukkit.plugin.EventExecutor;
 import org.graalvm.polyglot.Value;
 
 import me.conji.cauldron.Cauldron;
+import me.conji.cauldron.api.JsAccess;
 
+@JsAccess.BINDING("bukkit_bridge")
 public class BukkitBridge {
   public static void registerNewEventHandler(String type, Value handler) throws ClassNotFoundException {
     registerNewEventHandler(Class.forName(type).asSubclass(Event.class), handler);

@@ -3,6 +3,9 @@ package me.conji.cauldron.internal.modules;
 import me.conji.cauldron.api.Module;
 import me.conji.cauldron.core.Isolate;
 
+import me.conji.cauldron.api.JsAccess;
+
+@JsAccess.INNER_BINDING("native_module")
 public abstract class NativeModule extends Module {
   static boolean exists(String id) {
     return getCached(id) != null;

@@ -1,0 +1,6 @@
+name: Cauldron
+main: me.conji.cauldron.Cauldron
+
+description: A NodeJS-like environment for Spigot
+authors: [Conji]
+version: ${project.version}

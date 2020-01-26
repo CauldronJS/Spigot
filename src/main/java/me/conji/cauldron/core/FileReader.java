@@ -5,7 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import me.conji.cauldron.utils.PathHelpers;
+import me.conji.cauldron.api.JsAccess;
 
+@JsAccess.INNER_BINDING("file_reader")
 public class FileReader {
   public static String read(String location) throws FileNotFoundException, IOException {
     // first read from the disk "lib" dir, then read from resources

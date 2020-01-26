@@ -2,6 +2,7 @@ package me.conji.cauldron.core;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
 
 import org.bukkit.Bukkit;
@@ -9,22 +10,25 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.reflections.Reflections;
 
 import me.conji.cauldron.Cauldron;
+import me.conji.cauldron.api.JsAccess;
 import me.conji.cauldron.internal.modules.Console;
+import me.conji.cauldron.internal.modules.NativeModule;
 
+@JsAccess.INNER_BINDING("isolate")
 public class Isolate {
   private static final String CAULDRON_SYMBOL = "$$cauldron$$";
-  private static final String INSTANCE_SYMBOL = CAULDRON_SYMBOL + ".isolate";
-  private static final String NATIVE_MODULE_SYMBOL = CAULDRON_SYMBOL + ".nativeModule";
 
-  private static final String ENGINE_ENTRY = "lib/internal/bootstrap/loaders.js";
+  private static final String ENGINE_ENTRY = "lib/internal/bootstrap/loader.js";
 
   private static final int POLLING_TIME = 2;
   private static final int POLLING_TIME_EMPTY = 10;
   private static final int POLLING_DURATION = 5;
 
   private static Isolate activeIsolate;
+  private static Reflections reflections;
 
   private Cauldron cauldron;
   private Context context;
@@ -44,8 +48,11 @@ public class Isolate {
   public Isolate(Cauldron cauldronInstance) {
     this.cauldron = cauldronInstance;
     this.moduleManager = new ModuleManager(this);
-    this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowHostAccess(HostAccess.ALL)
-        .allowCreateThread(false).allowHostClassLoading(true).allowIO(false).build();
+    this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowAllAccess(true)
+        .allowHostAccess(HostAccess.ALL).allowCreateThread(true).allowHostClassLoading(true).allowIO(false).build();
+    if (reflections == null) {
+      reflections = Reflections.collect("me.conji.cauldron", null);
+    }
   }
 
   private Runnable getAsyncRunnable() {
@@ -67,11 +74,58 @@ public class Isolate {
     };
   }
 
+  private void createBindings() {
+    // polyfill globalThis if the current version doesn't have it
+    this.put("globalThis", this.context.getPolyglotBindings());
+    this.put(CAULDRON_SYMBOL, this.cauldron);
+    Set<Class<?>> globalBindings = reflections.getTypesAnnotatedWith(JsAccess.GLOBAL.class);
+    Set<Class<?>> innerBindings = reflections.getTypesAnnotatedWith(JsAccess.INNER_BINDING.class);
+    Set<Class<?>> publicBindings = reflections.getTypesAnnotatedWith(JsAccess.BINDING.class);
+
+    globalBindings.forEach(clazz -> {
+      JsAccess.GLOBAL jsAccess = clazz.getAnnotation(JsAccess.GLOBAL.class);
+      if (jsAccess.access() == JsAccess.AccessType.STATIC) {
+        this.put(jsAccess.value(), clazz);
+      } else {
+        try {
+          this.put(jsAccess.value(), clazz.newInstance());
+        } catch (Exception ex) {
+          Console.warn("Failed to bind type " + clazz.getName(), ex);
+        }
+      }
+    });
+    innerBindings.forEach(clazz -> {
+      JsAccess.INNER_BINDING jsAccess = clazz.getAnnotation(JsAccess.INNER_BINDING.class);
+      String prefixedName = CAULDRON_SYMBOL + ".internal." + jsAccess.value();
+      if (jsAccess.access() == JsAccess.AccessType.STATIC) {
+        this.put(prefixedName, clazz);
+      } else {
+        try {
+          this.put(prefixedName, clazz.newInstance());
+        } catch (Exception ex) {
+          Console.warn("Failed to bind type " + clazz.getName(), ex);
+        }
+      }
+    });
+    publicBindings.forEach(clazz -> {
+      JsAccess.BINDING jsAccess = clazz.getAnnotation(JsAccess.BINDING.class);
+      String prefixedName = CAULDRON_SYMBOL + ".public." + jsAccess.value();
+      if (jsAccess.access() == JsAccess.AccessType.STATIC) {
+        this.put(prefixedName, clazz);
+      } else {
+        try {
+          this.put(prefixedName, clazz.newInstance());
+        } catch (Exception ex) {
+          Console.warn("Failed to bind type " + clazz.getName(), ex);
+        }
+      }
+    });
+  }
+
   private boolean activate() {
     this.context.enter();
     if (!this.initialized) {
-      // polyfill globalThis if the current version doesn't have it
-      this.put("globalThis", this.context.getPolyglotBindings());
+      this.createBindings();
       this.moduleManager.registerModules();
       try {
         this.runScript(FileReader.read(ENGINE_ENTRY), ENGINE_ENTRY);
@@ -84,8 +138,6 @@ public class Isolate {
         return false;
       }
     }
-    this.put(INSTANCE_SYMBOL, this);
-    this.put(CAULDRON_SYMBOL, this.cauldron);
     activeIsolate = this;
     this.asyncProcessId = Bukkit.getScheduler().scheduleSyncRepeatingTask(cauldron, this.getAsyncRunnable(),
         this.asyncQueue.isEmpty() ? POLLING_TIME_EMPTY : POLLING_TIME, POLLING_DURATION);
@@ -113,6 +165,7 @@ public class Isolate {
    */
   public void dispose() {
     Bukkit.getScheduler().cancelTask(this.asyncProcessId);
+    this.context.leave();
     this.context.close(true);
   }
 

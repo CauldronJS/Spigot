@@ -52,7 +52,7 @@ public class ModuleManager {
         }
         if (module.isGlobal() && module.getName() != null) {
           // injects as a global class
-          this.isolate.bind(module.getName(), obj);
+          this.isolate.put(module.getName(), obj);
         }
         if (module.isInternal()) {
           // bind with access to `internalBinding`

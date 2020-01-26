@@ -4,7 +4,9 @@ import java.util.Arrays;
 import java.util.logging.Level;
 
 import me.conji.cauldron.Cauldron;
+import me.conji.cauldron.api.JsAccess;
 
+@JsAccess.GLOBAL("console")
 public class Console extends NativeModule {
   public Console() {
     super();

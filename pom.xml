@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>me.conji</groupId>
-    <artifactId>CauldronSpigot</artifactId>
+    <artifactId>Cauldron</artifactId>
     <version>1.0.0</version>
 
     <build>
         <defaultGoal>clean package</defaultGoal>
         <finalName>${project.finalBaseName}-noshade</finalName>
-
+        <sourceDirectory>src/main/java</sourceDirectory>
         <resources>
             <resource>
                 <directory>./src/main/resources</directory>
@@ -169,6 +169,28 @@
                         <tags>true</tags>
                     </gitDescribe>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/resources</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

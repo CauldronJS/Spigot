@@ -9,7 +9,9 @@ import java.io.InputStreamReader;
 import java.nio.file.*;
 
 import me.conji.cauldron.Cauldron;
+import me.conji.cauldron.api.JsAccess;
 
+@JsAccess.INNER_BINDING("path_helpers")
 public class PathHelpers {
   public static String join(String path1, String... paths) {
     return Paths.get(path1, paths).toString();
