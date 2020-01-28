@@ -2,12 +2,16 @@ package me.conji.cauldron.core;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.SynchronousQueue;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.ClassPath;
+import com.google.common.reflect.ClassPath.ClassInfo;
 
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
@@ -20,6 +24,7 @@ import me.conji.cauldron.internal.modules.Console;
 @JsAccess.INNER_BINDING("isolate")
 public class Isolate {
   private static final String CAULDRON_SYMBOL = "$$cauldron$$";
+  private static final String PLUGIN_SYMBOL = CAULDRON_SYMBOL + ".plugin";
 
   private static final String ENGINE_ENTRY = "lib/internal/bootstrap/loader.js";
 
@@ -56,7 +61,19 @@ public class Isolate {
       Console.error("Failed to register class path for Isolate.");
       Bukkit.getPluginManager().disablePlugin(Cauldron.instance());
     }
+  }
 
+  private static HashMap<String, ClassPath> getAllClassPaths() {
+    HashMap<String, ClassPath> results = new HashMap<>();
+    Plugin[] plugins = Bukkit.getPluginManager().getPlugins();
+    for (Plugin plugin : plugins) {
+      try {
+        results.put(plugin.getName(), ClassPath.from(plugin.getClass().getClassLoader()));
+      } catch (IOException ex) {
+        Console.warn("Failed to register class paths for plugin " + plugin.getName(), ex);
+      }
+    }
+    return results;
   }
 
   private Runnable getAsyncRunnable() {
