@@ -6,13 +6,6 @@ import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.SynchronousQueue;
 
-<<<<<<< HEAD
-import com.google.common.collect.ImmutableSet;
-import com.google.common.reflect.ClassPath;
-import com.google.common.reflect.ClassPath.ClassInfo;
-
-=======
->>>>>>> 01035ee9c55d5e90b17577994d52f997a8491ae6
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Context;
@@ -27,11 +20,7 @@ import me.conji.cauldron.internal.modules.Console;
 @JsAccess.INNER_BINDING("isolate")
 public class Isolate {
   private static final String CAULDRON_SYMBOL = "$$cauldron$$";
-<<<<<<< HEAD
-  private static final String PLUGIN_SYMBOL = CAULDRON_SYMBOL + ".plugin";
-=======
   private static final String ISOLATE_SYMBOL = CAULDRON_SYMBOL + ".isolate";
->>>>>>> 01035ee9c55d5e90b17577994d52f997a8491ae6
 
   private static final String ENGINE_ENTRY = "lib/internal/bootstrap/loader.js";
 
@@ -60,30 +49,7 @@ public class Isolate {
     this.cauldron = cauldronInstance;
     this.moduleManager = new ModuleManager(this);
     this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowAllAccess(true)
-<<<<<<< HEAD
-        .allowHostAccess(HostAccess.ALL).allowCreateThread(true).allowHostClassLoading(true).allowIO(false).build();
-    try {
-      classPath = ClassPath.from(Cauldron.class.getClassLoader());
-    } catch (IOException ex) {
-      Console.error("Failed to register class path for Isolate.");
-      Bukkit.getPluginManager().disablePlugin(Cauldron.instance());
-    }
-  }
-
-  private static HashMap<String, ClassPath> getAllClassPaths() {
-    HashMap<String, ClassPath> results = new HashMap<>();
-    Plugin[] plugins = Bukkit.getPluginManager().getPlugins();
-    for (Plugin plugin : plugins) {
-      try {
-        results.put(plugin.getName(), ClassPath.from(plugin.getClass().getClassLoader()));
-      } catch (IOException ex) {
-        Console.warn("Failed to register class paths for plugin " + plugin.getName(), ex);
-      }
-    }
-    return results;
-=======
         .allowHostAccess(HostAccess.ALL).allowHostClassLoading(true).allowHostClassLookup(s -> true).build();
->>>>>>> 01035ee9c55d5e90b17577994d52f997a8491ae6
   }
 
   private Runnable getAsyncRunnable() {
