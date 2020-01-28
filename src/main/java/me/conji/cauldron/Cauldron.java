@@ -20,6 +20,7 @@ public class Cauldron extends JavaPlugin {
   private boolean isInDebugMode = false;
 
   public Cauldron() {
+    instance = this;
     this.targetDescriptor = new TargetDescriptor("spigot");
     this.targetDescriptor.addVersionDescription("nms", this.getNMSVersion());
     this.targetDescriptor.addVersionDescription("cb", this.getCBVersion());
@@ -30,16 +31,8 @@ public class Cauldron extends JavaPlugin {
     instance = this;
     this.mainIsolate = new Isolate(this);
     // load the entry file
-    try {
-      this.mainIsolate.scope();
-      String entry = FileReader.read(ENGINE_ENTRY);
-      this.mainIsolate.runScript(entry, ENGINE_ENTRY);
-      Console.log("Finished initializing Cauldron");
-    } catch (FileNotFoundException ex) {
-      Console.error("Failed to find Cauldron entry point", ex);
-    } catch (IOException ex) {
-      Console.error("An error occured when loading Cauldron", ex);
-    }
+    this.mainIsolate.scope();
+    Console.log("Finished initializing Cauldron");
   }
 
   @Override
@@ -54,6 +47,10 @@ public class Cauldron extends JavaPlugin {
 
   public boolean getIsDebugging() {
     return this.isInDebugMode;
+  }
+
+  public Isolate isolate() {
+    return this.mainIsolate;
   }
 
   private String getNMSVersion() {
