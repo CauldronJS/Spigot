@@ -15,7 +15,6 @@ import org.reflections.Reflections;
 import me.conji.cauldron.Cauldron;
 import me.conji.cauldron.api.JsAccess;
 import me.conji.cauldron.internal.modules.Console;
-import me.conji.cauldron.internal.modules.NativeModule;
 
 @JsAccess.INNER_BINDING("isolate")
 public class Isolate {
@@ -77,6 +76,7 @@ public class Isolate {
   private void createBindings() {
     // polyfill globalThis if the current version doesn't have it
     this.put("globalThis", this.context.getPolyglotBindings());
+    this.put("process", false);
     this.put(CAULDRON_SYMBOL, this.cauldron);
     Set<Class<?>> globalBindings = reflections.getTypesAnnotatedWith(JsAccess.GLOBAL.class);
     Set<Class<?>> innerBindings = reflections.getTypesAnnotatedWith(JsAccess.INNER_BINDING.class);
