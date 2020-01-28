@@ -4,9 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.SynchronousQueue;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.reflect.ClassPath;
-
 import org.bukkit.Bukkit;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
@@ -20,6 +17,7 @@ import me.conji.cauldron.internal.modules.Console;
 @JsAccess.INNER_BINDING("isolate")
 public class Isolate {
   private static final String CAULDRON_SYMBOL = "$$cauldron$$";
+  private static final String ISOLATE_SYMBOL = CAULDRON_SYMBOL + ".isolate";
 
   private static final String ENGINE_ENTRY = "lib/internal/bootstrap/loader.js";
 
@@ -28,7 +26,6 @@ public class Isolate {
   private static final int POLLING_DURATION = 5;
 
   private static Isolate activeIsolate;
-  private static ClassPath classPath;
 
   private Cauldron cauldron;
   private Context context;
@@ -49,14 +46,7 @@ public class Isolate {
     this.cauldron = cauldronInstance;
     this.moduleManager = new ModuleManager(this);
     this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowAllAccess(true)
-        .allowHostAccess(HostAccess.ALL).allowCreateThread(true).allowHostClassLoading(true).allowIO(false).build();
-    try {
-      classPath = ClassPath.from(Cauldron.class.getClassLoader());
-    } catch (IOException ex) {
-      Console.error("Failed to register class path for Isolate.");
-      Bukkit.getPluginManager().disablePlugin(Cauldron.instance());
-    }
-
+        .allowHostAccess(HostAccess.ALL).allowHostClassLoading(true).allowHostClassLookup(s -> true).build();
   }
 
   private Runnable getAsyncRunnable() {
@@ -84,56 +74,15 @@ public class Isolate {
     this.put("globalThis", this.context.getPolyglotBindings());
     this.put("process", false);
     this.put(CAULDRON_SYMBOL, this.cauldron);
-
-    ImmutableSet<ClassPath.ClassInfo> classes = classPath.getAllClasses();
-    classes.forEach(classInfo -> {
-      Class<?> clazz = classInfo.load();
-      if (clazz.getAnnotation(JsAccess.GLOBAL.class) != null) {
-        JsAccess.GLOBAL jsAccess = clazz.getAnnotation(JsAccess.GLOBAL.class);
-        if (jsAccess.access() == JsAccess.AccessType.STATIC) {
-          this.put(jsAccess.value(), clazz);
-        } else {
-          try {
-            this.put(jsAccess.value(), clazz.newInstance());
-          } catch (Exception ex) {
-            Console.warn("Failed to bind type " + clazz.getName(), ex);
-          }
-        }
-      } else if (clazz.getAnnotation(JsAccess.INNER_BINDING.class) != null) {
-        JsAccess.INNER_BINDING jsAccess = clazz.getAnnotation(JsAccess.INNER_BINDING.class);
-        String prefixedName = CAULDRON_SYMBOL + ".internal." + jsAccess.value();
-        if (jsAccess.access() == JsAccess.AccessType.STATIC) {
-          this.put(prefixedName, clazz);
-        } else {
-          try {
-            this.put(prefixedName, clazz.newInstance());
-          } catch (Exception ex) {
-            Console.warn("Failed to bind type " + clazz.getName(), ex);
-          }
-        }
-      } else if (clazz.getAnnotation(JsAccess.BINDING.class) != null) {
-        JsAccess.BINDING jsAccess = clazz.getAnnotation(JsAccess.BINDING.class);
-        String prefixedName = CAULDRON_SYMBOL + ".public." + jsAccess.value();
-        if (jsAccess.access() == JsAccess.AccessType.STATIC) {
-          this.put(prefixedName, clazz);
-        } else {
-          try {
-            this.put(prefixedName, clazz.newInstance());
-          } catch (Exception ex) {
-            Console.warn("Failed to bind type " + clazz.getName(), ex);
-          }
-        }
-      }
-    });
+    this.put("bukkit_bridge", BukkitBridge.class);
   }
 
   private boolean activate() {
     this.context.enter();
     if (!this.initialized) {
       this.createBindings();
-      this.moduleManager.registerModules();
       try {
-        this.runScript(FileReader.read(ENGINE_ENTRY), ENGINE_ENTRY);
+        this.runScript(FileReader.read(this.cauldron, ENGINE_ENTRY), ENGINE_ENTRY);
         this.initialized = true;
       } catch (FileNotFoundException ex) {
         Console.error("Failed to find Cauldron entry point", ex);
@@ -144,6 +93,8 @@ public class Isolate {
       }
     }
     activeIsolate = this;
+    // refresh the registered isolate
+    this.put(ISOLATE_SYMBOL, this);
     this.asyncProcessId = Bukkit.getScheduler().scheduleSyncRepeatingTask(cauldron, this.getAsyncRunnable(),
         this.asyncQueue.isEmpty() ? POLLING_TIME_EMPTY : POLLING_TIME, POLLING_DURATION);
     return true;
@@ -210,6 +161,11 @@ public class Isolate {
       Console.error(ex);
       return null;
     }
+  }
+
+  public Value runScript(String location) throws FileNotFoundException, IOException {
+    String content = FileReader.read(this.cauldron, location);
+    return this.runScript(content, location);
   }
 
   public void put(String identifier, Object object) {

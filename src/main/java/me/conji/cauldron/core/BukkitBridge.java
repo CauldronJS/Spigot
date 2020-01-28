@@ -7,15 +7,16 @@ import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
+import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.HostAccess;
 
 import me.conji.cauldron.Cauldron;
-import me.conji.cauldron.api.JsAccess;
 
-@JsAccess.BINDING("bukkit_bridge")
 public class BukkitBridge {
-  public static void registerNewEventHandler(String type, Value handler) throws ClassNotFoundException {
-    registerNewEventHandler(Class.forName(type).asSubclass(Event.class), handler);
+  public static void registerNewEventHandler(Plugin cauldron, String type, Value handler)
+      throws ClassNotFoundException {
+    registerNewEventHandler(cauldron, Class.forName(type).asSubclass(Event.class), handler);
   }
 
   /**
@@ -25,7 +26,9 @@ public class BukkitBridge {
    * @param handler
    * @throws ClassNotFoundException
    */
-  public static void registerNewEventHandler(Class<? extends Event> type, Value handler) throws ClassNotFoundException {
+  @HostAccess.Export
+  public static void registerNewEventHandler(Plugin cauldron, Class<? extends Event> type, Value handler)
+      throws ClassNotFoundException {
     Listener lis = new Listener() {
       public int hashCode() {
         return super.hashCode();
@@ -39,12 +42,13 @@ public class BukkitBridge {
       }
     };
 
-    Bukkit.getPluginManager().registerEvent(type, lis, EventPriority.NORMAL, exec, Cauldron.instance());
+    Bukkit.getPluginManager().registerEvent(type, lis, EventPriority.NORMAL, exec, cauldron);
   }
 
   /**
    * Creates a command bound to Cauldron
    */
+  @HostAccess.Export
   public static Command createCommand(String name, final Value handler) {
     return new Command(name) {
       public boolean execute(CommandSender sender, String commandLabel, String[] args) {

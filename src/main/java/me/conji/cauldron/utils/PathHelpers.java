@@ -34,7 +34,7 @@ public class PathHelpers {
   }
 
   public static File resolveLocalFile(String path1, String... paths) {
-    return Paths.get(Cauldron.instance().getDataFolder().toPath().resolve(path1).toString(), paths).toFile();
+    return resolveLocalPath(path1, paths).toFile();
   }
 
   public static File resolveLocalFile(File file, String... paths) {
