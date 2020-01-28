@@ -2,15 +2,16 @@ package me.conji.cauldron.core;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.reflect.ClassPath;
 
 import org.bukkit.Bukkit;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-import org.reflections.Reflections;
 
 import me.conji.cauldron.Cauldron;
 import me.conji.cauldron.api.JsAccess;
@@ -27,7 +28,7 @@ public class Isolate {
   private static final int POLLING_DURATION = 5;
 
   private static Isolate activeIsolate;
-  private static Reflections reflections;
+  private static ClassPath classPath;
 
   private Cauldron cauldron;
   private Context context;
@@ -49,9 +50,13 @@ public class Isolate {
     this.moduleManager = new ModuleManager(this);
     this.context = Context.newBuilder("js").option("js.ecmascript-version", "10").allowAllAccess(true)
         .allowHostAccess(HostAccess.ALL).allowCreateThread(true).allowHostClassLoading(true).allowIO(false).build();
-    if (reflections == null) {
-      reflections = Reflections.collect("me.conji.cauldron", null);
+    try {
+      classPath = ClassPath.from(Cauldron.class.getClassLoader());
+    } catch (IOException ex) {
+      Console.error("Failed to register class path for Isolate.");
+      Bukkit.getPluginManager().disablePlugin(Cauldron.instance());
     }
+
   }
 
   private Runnable getAsyncRunnable() {
@@ -60,9 +65,10 @@ public class Isolate {
       @Override
       public void run() {
         int processed = 0;
-        while ((processed++) < 10 && !Isolate.activeIsolate.asyncQueue.isEmpty() && Isolate.this.isEngaged) {
+        Isolate isolate = Isolate.activeIsolate;
+        while ((processed++) < 10 && !isolate.asyncQueue.isEmpty() && isolate.isEngaged) {
           try {
-            Value nextInQueue = Isolate.activeIsolate.asyncQueue.take();
+            Value nextInQueue = isolate.asyncQueue.take();
             nextInQueue.executeVoid();
           } catch (InterruptedException ex) {
             Console.debug("Failed to finish async queue due to interruption. Details below:", ex);
@@ -78,45 +84,44 @@ public class Isolate {
     this.put("globalThis", this.context.getPolyglotBindings());
     this.put("process", false);
     this.put(CAULDRON_SYMBOL, this.cauldron);
-    Set<Class<?>> globalBindings = reflections.getTypesAnnotatedWith(JsAccess.GLOBAL.class);
-    Set<Class<?>> innerBindings = reflections.getTypesAnnotatedWith(JsAccess.INNER_BINDING.class);
-    Set<Class<?>> publicBindings = reflections.getTypesAnnotatedWith(JsAccess.BINDING.class);
 
-    globalBindings.forEach(clazz -> {
-      JsAccess.GLOBAL jsAccess = clazz.getAnnotation(JsAccess.GLOBAL.class);
-      if (jsAccess.access() == JsAccess.AccessType.STATIC) {
-        this.put(jsAccess.value(), clazz);
-      } else {
-        try {
-          this.put(jsAccess.value(), clazz.newInstance());
-        } catch (Exception ex) {
-          Console.warn("Failed to bind type " + clazz.getName(), ex);
+    ImmutableSet<ClassPath.ClassInfo> classes = classPath.getAllClasses();
+    classes.forEach(classInfo -> {
+      Class<?> clazz = classInfo.load();
+      if (clazz.getAnnotation(JsAccess.GLOBAL.class) != null) {
+        JsAccess.GLOBAL jsAccess = clazz.getAnnotation(JsAccess.GLOBAL.class);
+        if (jsAccess.access() == JsAccess.AccessType.STATIC) {
+          this.put(jsAccess.value(), clazz);
+        } else {
+          try {
+            this.put(jsAccess.value(), clazz.newInstance());
+          } catch (Exception ex) {
+            Console.warn("Failed to bind type " + clazz.getName(), ex);
+          }
         }
-      }
-    });
-    innerBindings.forEach(clazz -> {
-      JsAccess.INNER_BINDING jsAccess = clazz.getAnnotation(JsAccess.INNER_BINDING.class);
-      String prefixedName = CAULDRON_SYMBOL + ".internal." + jsAccess.value();
-      if (jsAccess.access() == JsAccess.AccessType.STATIC) {
-        this.put(prefixedName, clazz);
-      } else {
-        try {
-          this.put(prefixedName, clazz.newInstance());
-        } catch (Exception ex) {
-          Console.warn("Failed to bind type " + clazz.getName(), ex);
+      } else if (clazz.getAnnotation(JsAccess.INNER_BINDING.class) != null) {
+        JsAccess.INNER_BINDING jsAccess = clazz.getAnnotation(JsAccess.INNER_BINDING.class);
+        String prefixedName = CAULDRON_SYMBOL + ".internal." + jsAccess.value();
+        if (jsAccess.access() == JsAccess.AccessType.STATIC) {
+          this.put(prefixedName, clazz);
+        } else {
+          try {
+            this.put(prefixedName, clazz.newInstance());
+          } catch (Exception ex) {
+            Console.warn("Failed to bind type " + clazz.getName(), ex);
+          }
         }
-      }
-    });
-    publicBindings.forEach(clazz -> {
-      JsAccess.BINDING jsAccess = clazz.getAnnotation(JsAccess.BINDING.class);
-      String prefixedName = CAULDRON_SYMBOL + ".public." + jsAccess.value();
-      if (jsAccess.access() == JsAccess.AccessType.STATIC) {
-        this.put(prefixedName, clazz);
-      } else {
-        try {
-          this.put(prefixedName, clazz.newInstance());
-        } catch (Exception ex) {
-          Console.warn("Failed to bind type " + clazz.getName(), ex);
+      } else if (clazz.getAnnotation(JsAccess.BINDING.class) != null) {
+        JsAccess.BINDING jsAccess = clazz.getAnnotation(JsAccess.BINDING.class);
+        String prefixedName = CAULDRON_SYMBOL + ".public." + jsAccess.value();
+        if (jsAccess.access() == JsAccess.AccessType.STATIC) {
+          this.put(prefixedName, clazz);
+        } else {
+          try {
+            this.put(prefixedName, clazz.newInstance());
+          } catch (Exception ex) {
+            Console.warn("Failed to bind type " + clazz.getName(), ex);
+          }
         }
       }
     });
