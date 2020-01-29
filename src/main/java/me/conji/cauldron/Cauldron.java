@@ -2,18 +2,18 @@ package me.conji.cauldron;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import me.conji.cauldron.api.TargetDescriptor;
-import me.conji.cauldron.core.FileReader;
 import me.conji.cauldron.core.Isolate;
 import me.conji.cauldron.internal.modules.Console;
 
 public class Cauldron extends JavaPlugin {
   private static Cauldron instance;
-  private final String ENGINE_ENTRY = "lib/internal/bootstrap/loader.js";
 
   private Isolate mainIsolate;
   private TargetDescriptor targetDescriptor;
@@ -29,6 +29,17 @@ public class Cauldron extends JavaPlugin {
   @Override
   public void onEnable() {
     instance = this;
+    if (!this.getDataFolder().exists()) {
+      this.getDataFolder().mkdirs();
+      Path datadir = this.getDataFolder().toPath();
+      try {
+        datadir.resolve("src").toFile().mkdir();
+        Files.copy(this.getResource("package.json"), datadir.resolve("package.json"));
+        Files.copy(this.getResource("src/index/js"), datadir.resolve("src/index"));
+      } catch (IOException ex) {
+        // ignore
+      }
+    }
     this.mainIsolate = new Isolate(this);
     // load the entry file
     this.mainIsolate.scope();

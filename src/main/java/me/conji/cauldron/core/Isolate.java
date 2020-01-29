@@ -163,7 +163,7 @@ public class Isolate {
   public Value runScript(String script, String location) throws JsException {
     this.isEngaged = true;
     try {
-      Source source = Source.newBuilder("js", script, location).build();
+      Source source = Source.newBuilder("js", script, location).mimeType("application/javascript-module").build();
       this.isEngaged = false;
       return this.context.eval(source);
     } catch (IOException ex) {
