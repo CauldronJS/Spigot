@@ -13,7 +13,18 @@ public class Console extends NativeModule {
   }
 
   private static void l(Level level, Object... content) {
-    Cauldron.instance().getLogger().log(level, Arrays.toString(content));
+    for (Object item : content) {
+      if (item.getClass().isArray()) {
+        String result = "";
+        Object[] arr = (Object[]) item;
+        for (Object obj : arr) {
+          result += System.lineSeparator() + "\t" + obj.toString();
+        }
+        Cauldron.instance().getLogger().log(level, result);
+      } else {
+        Cauldron.instance().getLogger().log(level, item.toString());
+      }
+    }
   }
 
   public static void log(Object... contents) {

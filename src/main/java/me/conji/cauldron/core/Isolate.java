@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.SynchronousQueue;
+import java.util.stream.Stream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
@@ -15,6 +16,7 @@ import org.graalvm.polyglot.Value;
 
 import me.conji.cauldron.Cauldron;
 import me.conji.cauldron.api.JsAccess;
+import me.conji.cauldron.api.exceptions.JsException;
 import me.conji.cauldron.internal.modules.Console;
 
 @JsAccess.INNER_BINDING("isolate")
@@ -93,6 +95,8 @@ public class Isolate {
       } catch (IOException ex) {
         Console.error("An error occured while reading entry point", ex);
         return false;
+      } catch (JsException ex) {
+        Console.error("An error occured while reading entry point", ex, ex.getStackTrace());
       }
     }
     activeIsolate = this;
@@ -105,7 +109,11 @@ public class Isolate {
 
   private void pause() {
     Bukkit.getScheduler().cancelTask(this.asyncProcessId);
-    this.context.leave();
+    try {
+      this.context.leave();
+    } catch (Exception ex) {
+      // ignore
+    }
   }
 
   /**
@@ -123,8 +131,7 @@ public class Isolate {
    * Disposes of the isolate, destroying any resources and freeing them
    */
   public void dispose() {
-    Bukkit.getScheduler().cancelTask(this.asyncProcessId);
-    this.context.leave();
+    this.pause();
     this.context.close(true);
   }
 
@@ -153,7 +160,7 @@ public class Isolate {
    * @param location
    * @return
    */
-  public Value runScript(String script, String location) {
+  public Value runScript(String script, String location) throws JsException {
     this.isEngaged = true;
     try {
       Source source = Source.newBuilder("js", script, location).build();
@@ -163,10 +170,12 @@ public class Isolate {
       this.isEngaged = false;
       Console.error(ex);
       return null;
+    } catch (Exception ex) {
+      throw new JsException(ex);
     }
   }
 
-  public Value runScript(String location) throws FileNotFoundException, IOException {
+  public Value runScript(String location) throws FileNotFoundException, IOException, JsException {
     String content = FileReader.read(this.cauldron, location);
     return this.runScript(content, location);
   }
