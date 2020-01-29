@@ -57,6 +57,8 @@ public class FileReader {
       result += (line + System.lineSeparator());
     }
 
+    reader.close();
+
     return result;
   }
 
