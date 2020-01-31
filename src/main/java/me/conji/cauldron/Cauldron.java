@@ -1,5 +1,6 @@
 package me.conji.cauldron;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,16 +9,18 @@ import java.nio.file.Path;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import de.mxro.process.Spawn;
 import me.conji.cauldron.api.TargetDescriptor;
 import me.conji.cauldron.core.Isolate;
 import me.conji.cauldron.internal.modules.Console;
+import me.conji.cauldron.utils.PathHelpers;
 
 public class Cauldron extends JavaPlugin {
   private static Cauldron instance;
 
   private Isolate mainIsolate;
   private TargetDescriptor targetDescriptor;
-  private boolean isInDebugMode = false;
+  private boolean isInDebugMode = true;
 
   public Cauldron() {
     instance = this;
@@ -49,7 +52,11 @@ public class Cauldron extends JavaPlugin {
   @Override
   public void onDisable() {
     // dispose of engine and wait for all promises to finish
-    this.mainIsolate.dispose();
+    try {
+      // this.mainIsolate.dispose();
+    } catch (Exception ex) {
+      // ignore
+    }
   }
 
   public void setIsDebugging(boolean value) {
@@ -62,6 +69,11 @@ public class Cauldron extends JavaPlugin {
 
   public Isolate isolate() {
     return this.mainIsolate;
+  }
+
+  public String spawn(String command, String directory) {
+    File dir = PathHelpers.resolveLocalFile(directory);
+    return Spawn.sh(dir, command);
   }
 
   private String getNMSVersion() {

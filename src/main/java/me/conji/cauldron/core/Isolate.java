@@ -132,7 +132,11 @@ public class Isolate {
    */
   public void dispose() {
     this.pause();
-    this.context.close(true);
+    try {
+      this.context.close(true);
+    } catch (Exception ex) {
+      // ignore
+    }
   }
 
   /**
@@ -163,7 +167,7 @@ public class Isolate {
   public Value runScript(String script, String location) throws JsException {
     this.isEngaged = true;
     try {
-      Source source = Source.newBuilder("js", script, location).mimeType("application/javascript-module").build();
+      Source source = Source.newBuilder("js", script, location).mimeType("application/javascript").build();
       this.isEngaged = false;
       return this.context.eval(source);
     } catch (IOException ex) {
