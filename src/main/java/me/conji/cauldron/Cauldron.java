@@ -1,21 +1,17 @@
 package me.conji.cauldron;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import de.mxro.process.Spawn;
-import me.conji.cauldron.api.TargetDescriptor;
-import me.conji.cauldron.core.Isolate;
-import me.conji.cauldron.internal.modules.Console;
-import me.conji.cauldron.utils.PathHelpers;
+import me.conji.cauldron.utils.Console;
 
-public class Cauldron extends JavaPlugin {
+public class Cauldron extends JavaPlugin implements CauldronAPI {
   private static Cauldron instance;
 
   private Isolate mainIsolate;
@@ -24,9 +20,7 @@ public class Cauldron extends JavaPlugin {
 
   public Cauldron() {
     instance = this;
-    this.targetDescriptor = new TargetDescriptor("spigot");
-    this.targetDescriptor.addVersionDescription("nms", this.getNMSVersion());
-    this.targetDescriptor.addVersionDescription("cb", this.getCBVersion());
+    this.targetDescriptor = new TargetDescriptor("spigot", this.getNMSVersion());
   }
 
   @Override
@@ -67,15 +61,6 @@ public class Cauldron extends JavaPlugin {
     return this.isInDebugMode;
   }
 
-  public Isolate isolate() {
-    return this.mainIsolate;
-  }
-
-  public String spawn(String command, String directory) {
-    File dir = PathHelpers.resolveLocalFile(directory);
-    return Spawn.sh(dir, command);
-  }
-
   private String getNMSVersion() {
     String fullName = Bukkit.getServer().getClass().getPackage().getName();
     String withUnderscores = fullName.substring(fullName.lastIndexOf('.') + 1);
@@ -86,11 +71,48 @@ public class Cauldron extends JavaPlugin {
     }
   }
 
-  private String getCBVersion() {
-    return Bukkit.getBukkitVersion();
-  }
-
   public static Cauldron instance() {
     return instance;
+  }
+
+  @Override
+  public Isolate getMainIsolate() {
+    return this.mainIsolate;
+  }
+
+  @Override
+  public boolean cancelTask(int id) {
+    Bukkit.getScheduler().cancelTask(id);
+    return true;
+  }
+
+  @Override
+  public File cwd() {
+    return this.getDataFolder();
+  }
+
+  @Override
+  public TargetDescriptor getTarget() {
+    return this.targetDescriptor;
+  }
+
+  @Override
+  public boolean isDebugging() {
+    return this.isInDebugMode;
+  }
+
+  @Override
+  public void log(Level level, String msg) {
+    this.getLogger().log(level, msg);
+  }
+
+  @Override
+  public int scheduleRepeatingTask(Runnable runnable, int interval, int timeout) {
+    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval, timeout);
+  }
+
+  @Override
+  public int scheduleTask(Runnable runnable, int timeout) {
+    return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable);
   }
 }

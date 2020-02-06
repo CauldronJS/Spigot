@@ -1,4 +1,4 @@
-package me.conji.cauldron.api.exceptions;
+package me.conji.cauldron.exceptions;
 
 public class NotImplementedException extends Exception {
   private static final long serialVersionUID = 8376346047850458885L;

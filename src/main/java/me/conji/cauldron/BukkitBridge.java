@@ -1,4 +1,4 @@
-package me.conji.cauldron.core;
+package me.conji.cauldron;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -10,8 +10,6 @@ import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.HostAccess;
-
-import me.conji.cauldron.Cauldron;
 
 public class BukkitBridge {
   public static void registerNewEventHandler(Plugin cauldron, String type, Value handler)
