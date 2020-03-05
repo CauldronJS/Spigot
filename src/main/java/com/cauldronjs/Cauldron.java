@@ -1,15 +1,14 @@
-package me.conji.cauldron;
+package com.cauldronjs;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import me.conji.cauldron.utils.Console;
+import com.cauldronjs.utils.Console;
+import com.cauldronjs.utils.PathHelpers;
 
 public class Cauldron extends JavaPlugin implements CauldronAPI {
   private static Cauldron instance;
@@ -26,21 +25,16 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   @Override
   public void onEnable() {
     instance = this;
-    if (!this.getDataFolder().exists()) {
-      this.getDataFolder().mkdirs();
-      Path datadir = this.getDataFolder().toPath();
-      try {
-        datadir.resolve("src").toFile().mkdir();
-        Files.copy(this.getResource("package.json"), datadir.resolve("package.json"));
-        Files.copy(this.getResource("src/index/js"), datadir.resolve("src/index"));
-      } catch (IOException ex) {
-        // ignore
-      }
+    try {
+      this.mainIsolate = new Isolate(this);
+      PathHelpers.tryInitializeCwd(this);
+      this.mainIsolate.bind("BukkitBridge", new BukkitBridge());
+      // load the entry file
+      this.mainIsolate.scope();
+      this.log(Level.INFO, "Finished initializing Cauldron");
+    } catch (IOException ex) {
+      this.log(Level.WARNING, "Failed to instantiate cwd");
     }
-    this.mainIsolate = new Isolate(this);
-    // load the entry file
-    this.mainIsolate.scope();
-    Console.log("Finished initializing Cauldron");
   }
 
   @Override
@@ -87,11 +81,6 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   }
 
   @Override
-  public File cwd() {
-    return this.getDataFolder();
-  }
-
-  @Override
   public TargetDescriptor getTarget() {
     return this.targetDescriptor;
   }
@@ -108,11 +97,16 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
 
   @Override
   public int scheduleRepeatingTask(Runnable runnable, int interval, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval, timeout);
+    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval / 20, timeout);
   }
 
   @Override
   public int scheduleTask(Runnable runnable, int timeout) {
     return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable);
+  }
+
+  @Override
+  public File getDefaultCwd() {
+    return this.getDataFolder();
   }
 }

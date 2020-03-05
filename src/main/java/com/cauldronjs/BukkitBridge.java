@@ -1,4 +1,4 @@
-package me.conji.cauldron;
+package com.cauldronjs;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -12,8 +12,7 @@ import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.HostAccess;
 
 public class BukkitBridge {
-  public static void registerNewEventHandler(Plugin cauldron, String type, Value handler)
-      throws ClassNotFoundException {
+  public void registerNewEventHandler(Plugin cauldron, String type, Value handler) throws ClassNotFoundException {
     registerNewEventHandler(cauldron, Class.forName(type).asSubclass(Event.class), handler);
   }
 
@@ -24,8 +23,7 @@ public class BukkitBridge {
    * @param handler
    * @throws ClassNotFoundException
    */
-  @HostAccess.Export
-  public static void registerNewEventHandler(Plugin cauldron, Class<? extends Event> type, Value handler)
+  public void registerNewEventHandler(Plugin cauldron, Class<? extends Event> type, Value handler)
       throws ClassNotFoundException {
     Listener lis = new Listener() {
       public int hashCode() {
@@ -46,8 +44,7 @@ public class BukkitBridge {
   /**
    * Creates a command bound to Cauldron
    */
-  @HostAccess.Export
-  public static Command createCommand(String name, final Value handler) {
+  public Command createCommand(String name, final Value handler) {
     return new Command(name) {
       public boolean execute(CommandSender sender, String commandLabel, String[] args) {
         return handler.execute(sender, commandLabel, args).asBoolean();

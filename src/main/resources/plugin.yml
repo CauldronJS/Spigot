@@ -1,5 +1,5 @@
 name: Cauldron
-main: me.conji.cauldron.Cauldron
+main: com.cauldronjs.Cauldron
 
 description: A NodeJS-like environment for Spigot
 authors: [Conji]
