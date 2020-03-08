@@ -96,12 +96,12 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
 
   @Override
   public int scheduleRepeatingTask(Runnable runnable, int interval, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval / 20, timeout);
+    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval / 40, timeout / 40);
   }
 
   @Override
   public int scheduleTask(Runnable runnable, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable);
+    return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable, timeout / 40);
   }
 
   @Override
