@@ -27,7 +27,6 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
     instance = this;
     try {
       this.mainIsolate = new Isolate(this);
-      PathHelpers.tryInitializeCwd(this);
       this.mainIsolate.bind("BukkitBridge", new BukkitBridge());
       // load the entry file
       this.mainIsolate.scope();
