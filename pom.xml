@@ -5,10 +5,16 @@
 
     <groupId>com.cauldronjs</groupId>
     <artifactId>CauldronSpigot</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <name>Cauldron-Spigot</name>
-
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub CauldronJS Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/cauldronjs/spigot</url>
+        </repository>
+    </distributionManagement>
     <build>
         <defaultGoal>clean package</defaultGoal>
         <finalName>${project.finalBaseName}-noshade</finalName>
@@ -85,40 +91,9 @@
                     <!-- Relocate shaded libraries that might cause class conflicts with other plugins -->
                     <relocations>
                         <relocation>
-                            <pattern>com.comphenix.packetwrapper</pattern>
-                            <shadedPattern>com.cauldronjs.libs.com.comphenix.packetwrapper</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>net.querz.nbt</pattern>
-                            <shadedPattern>com.cauldronjs.libs.net.querz.nbt</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>io.sentry</pattern>
-                            <shadedPattern>com.cauldronjs.libs.io.sentry</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.slf4j</pattern>
-                            <shadedPattern>com.cauldronjs.libs.org.slf4j</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>javax.inject</pattern>
-                            <shadedPattern>com.cauldronjs.libs.javax.inject</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>ch.jalu</pattern>
-                            <shadedPattern>com.cauldronjs.libs.ch.jalu</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.apache.commons</pattern>
-                            <shadedPattern>com.cauldronjs.libs.org.apache.commons</shadedPattern>
-                        </relocation>
-                        <relation>
-                            <pattern>com.fasterxml.jackson.core</pattern>
-                            <shadedPattern>com.cauldronjs.libs.com.fasterxml.jackson.core</shadedPattern>
-                        </relation>
-                        <relocation>
-                            <pattern>main.java.de.mxro.process</pattern>
-                            <shadedPattern>com.cauldronjs.libs.main.java.de.mxro.process</shadedPattern>
+                            <pattern>org.bstats</pattern>
+                            <!-- Replace this with your package! -->
+                            <shadedPattern>your.package</shadedPattern>
                         </relocation>
                     </relocations>
 
@@ -189,6 +164,27 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-deploy</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${project.build.directory}/${project.finalBaseName}.jar</file>
+                            <groupId>${project.groupId}</groupId>
+                            <artifactId>${project.name}</artifactId>
+                            <version>${project.version}</version>
+                            <repositoryId>github</repositoryId>
+                            <url>https://maven.pkg.github.com/cauldronjs/spigot</url>
+                            <generatePom>false</generatePom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -199,35 +195,11 @@
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots</url>
         </repository>
 
-        <!-- CodeMC Repo -->
         <repository>
-            <id>codemc-repo</id>
+            <id>CodeMC</id>
             <url>https://repo.codemc.org/repository/maven-public</url>
         </repository>
 
-        <!-- ProtocolLib Repo -->
-        <repository>
-            <id>dmulloy2-repo</id>
-            <url>http://repo.dmulloy2.net/content/groups/public</url>
-        </repository>
-
-        <!-- InventiveTalent Repo -->
-        <repository>
-            <id>inventive-repo</id>
-            <url>https://repo.inventivetalent.org/content/groups/public</url>
-        </repository>
-
-        <!-- Airkar Repo -->
-        <repository>
-            <id>aikar</id>
-            <url>https://repo.aikar.co/content/groups/aikar/</url>
-        </repository>
-
-        <!-- JitPack Repo -->
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
     </repositories>
 
     <dependencies>
@@ -261,85 +233,38 @@
             </exclusions>
         </dependency>
 
-        <!-- ProtocolLib, spigot packet manipulation library, https://github.com/dmulloy2/ProtocolLib -->
-        <dependency>
-            <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib-API</artifactId>
-            <version>4.4.0-SNAPSHOT</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>cglib</groupId>
-                    <artifactId>cglib-nodep</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.comphenix.executors</groupId>
-                    <artifactId>BukkitExecutors</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>com.comphenix.packetwrapper</groupId>
-            <artifactId>PacketWrapper</artifactId>
-            <version>1.13-R0.1-SNAPSHOT</version>
-            <optional>true</optional>
-        </dependency>
-
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.9</version>
         </dependency>
 
-        <!-- Sentry, a library that collects exception data and reports them automatically -->
-        <dependency>
-            <groupId>io.sentry</groupId>
-            <artifactId>sentry</artifactId>
-            <version>1.7.26</version>
-            <optional>true</optional>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.Querz</groupId>
-            <artifactId>NBT</artifactId>
-            <version>3.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.griefcraft.lwc</groupId>
-            <artifactId>Modern-LWC</artifactId>
-            <version>2.1.2</version>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-
         <dependency>
             <groupId>org.graalvm.truffle</groupId>
             <artifactId>truffle-api</artifactId>
-            <version>19.3.1</version>
+            <version>20.0.0</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.graalvm.sdk</groupId>
             <artifactId>graal-sdk</artifactId>
-            <version>19.3.1</version>
+            <version>20.0.0</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>com.cauldronjs</groupId>
             <artifactId>CauldronAPI</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>1.7</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
 

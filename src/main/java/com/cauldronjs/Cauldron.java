@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
 
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -11,6 +12,8 @@ import com.cauldronjs.utils.Console;
 import com.cauldronjs.utils.PathHelpers;
 
 public class Cauldron extends JavaPlugin implements CauldronAPI {
+  private static final int PLUGIN_ID = 6842;
+
   private static Cauldron instance;
 
   private Isolate mainIsolate;
@@ -30,17 +33,21 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
       this.mainIsolate.bind("BukkitBridge", new BukkitBridge());
       // load the entry file
       this.mainIsolate.scope();
+      this.mainIsolate.runEntry();
       this.log(Level.INFO, "Finished initializing Cauldron");
     } catch (IOException ex) {
       this.log(Level.WARNING, "Failed to instantiate cwd");
     }
+
+    Metrics metrics = new Metrics(this, PLUGIN_ID);
+
   }
 
   @Override
   public void onDisable() {
     // dispose of engine and wait for all promises to finish
     try {
-      // this.mainIsolate.dispose();
+      this.mainIsolate.dispose();
     } catch (Exception ex) {
       // ignore
     }
@@ -96,12 +103,12 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
 
   @Override
   public int scheduleRepeatingTask(Runnable runnable, int interval, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval / 40, timeout / 40);
+    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval / 50, timeout / 50);
   }
 
   @Override
   public int scheduleTask(Runnable runnable, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable, timeout / 40);
+    return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable, timeout / 50);
   }
 
   @Override

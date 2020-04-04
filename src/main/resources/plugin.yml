@@ -3,4 +3,4 @@ main: com.cauldronjs.Cauldron
 
 description: A NodeJS-like environment for Spigot
 authors: [Conji]
-version: ${project.version}
+version: 1.0.1

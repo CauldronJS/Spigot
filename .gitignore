@@ -6,3 +6,4 @@
 jars
 target
 *.iml
+deploy.sh
