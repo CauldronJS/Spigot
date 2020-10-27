@@ -9,7 +9,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
 import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.HostAccess;
 
 public class BukkitBridge {
   public void registerNewEventHandler(Plugin cauldron, String type, Value handler) throws ClassNotFoundException {
@@ -31,10 +30,10 @@ public class BukkitBridge {
       }
     };
     EventExecutor exec = (listener, event) -> {
-      try {
+      if (event.isAsynchronous()) {
+        // send to Isolate's thread and process on said thread.
+      } else {
         handler.execute(event);
-      } catch (Exception exception) {
-        // do nothing
       }
     };
 

@@ -1,15 +1,15 @@
 package com.cauldronjs;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.logging.Level;
 
+import com.cauldronjs.isolate.Isolate;
+import com.cauldronjs.isolate.IsolateManager;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.cauldronjs.utils.Console;
-import com.cauldronjs.utils.PathHelpers;
+import org.graalvm.polyglot.Value;
 
 public class Cauldron extends JavaPlugin implements CauldronAPI {
   private static final int PLUGIN_ID = 6842;
@@ -17,6 +17,7 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   private static Cauldron instance;
 
   private Isolate mainIsolate;
+  private IsolateManager isolateManager;
   private TargetDescriptor targetDescriptor;
   private boolean isInDebugMode = true;
 
@@ -28,16 +29,13 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   @Override
   public void onEnable() {
     instance = this;
-    try {
-      this.mainIsolate = new Isolate(this);
-      this.mainIsolate.bind("BukkitBridge", new BukkitBridge());
-      // load the entry file
-      this.mainIsolate.scope();
-      this.mainIsolate.runEntry();
-      this.log(Level.INFO, "Finished initializing Cauldron");
-    } catch (IOException ex) {
-      this.log(Level.WARNING, "Failed to instantiate cwd");
-    }
+    this.isolateManager = new IsolateManager(this);
+    this.mainIsolate = this.isolateManager.initialize();
+    this.mainIsolate.getBindingProvider().register(new BukkitBridge());
+    this.isolateManager.activateIsolate(this.mainIsolate);
+    // load the entry file
+    this.mainIsolate.start();
+    this.log(Level.INFO, "Finished initializing Cauldron");
 
     Metrics metrics = new Metrics(this, PLUGIN_ID);
 
@@ -47,7 +45,9 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   public void onDisable() {
     // dispose of engine and wait for all promises to finish
     try {
-      this.mainIsolate.dispose();
+      // TODO: the reload command attempts to fetch JS commands, gotta figure
+      // out how to prevent this from haulting the reload
+      // this.mainIsolate.dispose();
     } catch (Exception ex) {
       // ignore
     }
@@ -81,6 +81,11 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   }
 
   @Override
+  public IsolateManager getIsolateManager() {
+    return this.isolateManager;
+  }
+
+  @Override
   public boolean cancelTask(int id) {
     Bukkit.getScheduler().cancelTask(id);
     return true;
@@ -102,17 +107,42 @@ public class Cauldron extends JavaPlugin implements CauldronAPI {
   }
 
   @Override
+  public int scheduleRepeatingTask(Value fn, int interval, int timeout) {
+    Runnable runnable = fn::executeVoid;
+    return Bukkit.getScheduler().runTaskTimer(this, runnable, interval / 50, timeout / 50).getTaskId();
+  }
+
+  @Override
+  public int scheduleTask(Value fn, int timeout) {
+    Runnable runnable = fn::executeVoid;
+    if (timeout == 0) {
+      return Bukkit.getScheduler().runTask(this, runnable).getTaskId();
+    } else {
+      return Bukkit.getScheduler().runTaskLater(this, runnable, timeout / 50).getTaskId();
+    }
+  }
+
+  @Override
   public int scheduleRepeatingTask(Runnable runnable, int interval, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncRepeatingTask(this, runnable, interval / 50, timeout / 50);
+    return Bukkit.getScheduler().runTaskTimer(this, runnable, interval / 50, timeout / 50).getTaskId();
   }
 
   @Override
   public int scheduleTask(Runnable runnable, int timeout) {
-    return Bukkit.getScheduler().scheduleSyncDelayedTask(this, runnable, timeout / 50);
+    if (timeout == 0) {
+      return Bukkit.getScheduler().runTask(this, runnable).getTaskId();
+    } else {
+      return Bukkit.getScheduler().runTaskLater(this, runnable, timeout / 50).getTaskId();
+    }
   }
 
   @Override
   public File getDefaultCwd() {
     return this.getDataFolder();
+  }
+
+  @Override
+  public boolean isRunning() {
+    return true;
   }
 }
